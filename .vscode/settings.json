@@ -2,9 +2,11 @@
     "dart.flutterSdkPath": ".fvm/flutter_sdk",
     "cSpell.words": [
         "appbar",
+        "appbundle",
         "codecov",
         "Cupertino",
         "Schyler",
+        "subosito",
         "wireframe"
     ]
 }

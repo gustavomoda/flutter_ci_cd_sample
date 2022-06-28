@@ -1,5 +1,5 @@
 
-name: CI APP
+name: CI/CD APP
 on:
   push:
     branches:
@@ -10,7 +10,7 @@ on:
       
 jobs:
   ci:
-    name: "ci job"
+    name: "CI"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout repository"
@@ -20,19 +20,31 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '12.x'
+
+      - name: "Cache flutter packages"
+        uses: actions/cache@v3
+        id: cache-flutter
+        env:
+          cache-name: cache-flutter
+        with:
+          path: /opt/hostedtoolcache/flutter
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
       
       - name: "Setup Flutter"
         uses: subosito/flutter-action@v1
         with:
           channel: "stable"
  
+      - name: "Get Flutter packages"
+        if: steps.cache-flutter.outputs.cache-hit != 'true'
+        run: |
+          flutter pub get
+
       - name: "Running lint"
         run: |
           flutter analyze
-
-      - name: "Getting packages"
-        run: |
-          flutter pub get
 
       - name: "Running Tests"
         run: |
@@ -43,3 +55,84 @@ jobs:
         with:
           # token: ${{secrets.CODECOV_TOKEN}} # Not required if repository is public
           file: ./coverage/lcov.info
+
+  build-check-android: 
+    name: "Build Android"
+    needs: ci
+    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        github.event_name == 'push' && github.event.ref == 'refs/heads/main'
+      }}
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+        
+      - name: "Setup Java"
+        uses: actions/setup-java@v1
+        with:
+          java-version: '12.x'
+
+      - name: "Get Flutter packages"
+        uses: actions/cache@v3
+        id: cache-flutter
+        env:
+          cache-name: cache-flutter
+        with:
+          path: /opt/hostedtoolcache/flutter
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+      - name: "Setup Flutter"
+        uses: subosito/flutter-action@v1
+        with:
+          channel: "stable"
+ 
+      - name: "Get flutter packages"
+        if: steps.cache-flutter.outputs.cache-hit != 'true'
+        run: |
+          flutter pub get
+
+      - name: "Build apk debug mode"
+        run: |
+          flutter build apk --debug
+ 
+  build-check-ios: 
+    name: "Build IOS"
+    needs: ci
+    runs-on: macos-latest
+    if: >-
+      ${{
+        github.event_name == 'push' && github.event.ref == 'refs/heads/main'
+      }}
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+              
+      - name: "Cache flutter packages"
+        uses: actions/cache@v3
+        id: cache-flutter
+        env:
+          cache-name: cache-flutter
+        with:
+          path: /opt/hostedtoolcache/flutter
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+      - name: "Setup Flutter"
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          architecture: x64
+
+      - name: "Get Flutter packages"
+        if: steps.cache-flutter.outputs.cache-hit != 'true'
+        run: |
+          flutter pub get
+      
+      - name: "Build iOS debug mode"
+        run: |
+          flutter build ios --debug --no-codesign 
+ 
