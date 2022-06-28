@@ -1,0 +1,45 @@
+
+name: CI APP
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      
+jobs:
+  ci:
+    name: "ci job"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+        
+      - name: "Setup Java"
+        uses: actions/setup-java@v1
+        with:
+          java-version: '12.x'
+      
+      - name: "Setup Flutter"
+        uses: subosito/flutter-action@v1
+        with:
+          channel: "stable"
+ 
+      - name: "Running lint"
+        run: |
+          flutter analyze
+
+      - name: "Getting packages"
+        run: |
+          flutter pub get
+
+      - name: "Running Tests"
+        run: |
+          flutter test --coverage
+
+      - name: "Reporting code coverage to codecov"
+        uses: codecov/codecov-action@v1
+        with:
+          # token: ${{secrets.CODECOV_TOKEN}} # Not required if repository is public
+          file: ./coverage/lcov.info
